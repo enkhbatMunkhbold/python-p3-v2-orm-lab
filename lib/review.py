@@ -120,20 +120,61 @@ class Review:
             WHERE id = ?
         """
 
-        row = CURSOR.execute(sql, (id,)).fetchall()
+        row = CURSOR.execute(sql, (id,)).fetchone()
         return cls.instance_from_db(row) if row else None
 
     def update(self):
         """Update the table row corresponding to the current Review instance."""
-        pass
+        sql = """
+            UPDATE reviews
+            SET year =?, summary =?, employee_id =?
+            WHERE id =?
+        """
+
+        CURSOR.execute(sql, (self.year, self.summary,
+                             self.employee_id, self.id))
+        CONN.commit()
 
     def delete(self):
         """Delete the table row corresponding to the current Review instance,
         delete the dictionary entry, and reassign id attribute"""
-        pass
+
+        sql = """
+            DELETE FROM reviews
+            WHERE id =?
+        """
+        CURSOR.execute(sql, (self.id,))
+        CONN.commit()
+
+        del type(self).all[self.id]
+        self.id = None
 
     @classmethod
     def get_all(cls):
         """Return a list containing one Review instance per table row"""
-        pass
+        
+        sql = """
+            SELECT * FROM reviews
+        """
+
+        rows = CURSOR.execute(sql).fetchall()
+        return [cls.instance_from_db(row) for row in rows]
+
+    def employee(self):
+        """Return Employee object associated with the current Review instance"""
+        return Employee.find_by_id(self.employee_id)
+
+    def department(self):
+        """Return Department object associated with the current Review instance"""
+        return Department.find_by_id(self.employee().department_id)
+
+    def get_reviews_by_employee(cls, employee_id):
+        """Return list of Review instances associated with the specified employee"""
+        sql = """
+            SELECT * FROM reviews
+            WHERE employee_id = ?
+        """
+
+        rows = CURSOR.execute(sql, (employee_id,)).fetchall()
+        return [Review.instance_from_db(row) for row in rows]
 
